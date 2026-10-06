@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="320" viewBox="0 0 1000 320" role="img" aria-labelledby="title desc">
+  <title id="title">FP32 to INT8 quantization and dequantization</title>
+  <desc id="desc">An FP32 value is rounded to an INT8 value using scale and zero point, then mapped back to an approximate FP32 value.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0 0L8 4L0 8Z" fill="#475569"/>
+    </marker>
+    <style>
+      text { font-family: Arial, sans-serif; fill: #172033; }
+      .title { font-size: 25px; font-weight: 700; }
+      .head { font-size: 16px; font-weight: 700; }
+      .value { font-size: 15px; fill: #334155; }
+      .note { font-size: 14px; fill: #475569; }
+      .arrow { stroke: #475569; stroke-width: 2.5; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="1000" height="320" fill="#fff"/>
+  <text x="40" y="45" class="title">FP32 -> INT8 -> approximate FP32</text>
+  <g>
+    <rect x="20" y="90" width="170" height="126" rx="12" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+    <text x="105" y="126" text-anchor="middle" class="head">Input FP32</text>
+    <text x="105" y="166" text-anchor="middle" class="value">r = 0.50</text>
+  </g>
+  <line x1="192" y1="153" x2="214" y2="153" class="arrow"/>
+  <g>
+    <rect x="220" y="90" width="170" height="126" rx="12" fill="#fff7ed" stroke="#f97316" stroke-width="2"/>
+    <text x="305" y="126" text-anchor="middle" class="head">Quantize</text>
+    <text x="305" y="160" text-anchor="middle" class="value">q = round(r / S) + Z</text>
+    <text x="305" y="187" text-anchor="middle" class="note">then clip to INT8 range</text>
+  </g>
+  <line x1="392" y1="153" x2="414" y2="153" class="arrow"/>
+  <g>
+    <rect x="420" y="90" width="170" height="126" rx="12" fill="#f0fdf4" stroke="#16a34a" stroke-width="2"/>
+    <text x="505" y="126" text-anchor="middle" class="head">Store INT8</text>
+    <text x="505" y="166" text-anchor="middle" class="value">q = 32</text>
+  </g>
+  <line x1="592" y1="153" x2="614" y2="153" class="arrow"/>
+  <g>
+    <rect x="620" y="90" width="170" height="126" rx="12" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="2"/>
+    <text x="705" y="126" text-anchor="middle" class="head">Dequantize</text>
+    <text x="705" y="166" text-anchor="middle" class="value">r' = S x (q - Z)</text>
+  </g>
+  <line x1="792" y1="153" x2="814" y2="153" class="arrow"/>
+  <g>
+    <rect x="820" y="90" width="160" height="126" rx="12" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+    <text x="900" y="126" text-anchor="middle" class="head">Reconstructed</text>
+    <text x="900" y="166" text-anchor="middle" class="value">r' ~= 0.504</text>
+  </g>
+  <text x="40" y="260" class="note">Example: symmetric quantization with S = 2 / 127 and Z = 0.</text>
+  <text x="40" y="284" class="note">Rounding makes the reconstructed value approximate; values outside the range are clipped.</text>
+</svg>

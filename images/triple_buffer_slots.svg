@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="410" viewBox="0 0 1000 410" role="img" aria-labelledby="title desc">
+  <title id="title">Triple-buffer slot roles</title>
+  <desc id="desc">A capture thread writes to a producer slot, a shared slot holds the latest frame, and an inference worker reads from a consumer slot. Slot roles rotate without overwriting a frame being consumed.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0 0L8 4L0 8Z" fill="#475569"/>
+    </marker>
+    <style>
+      text { font-family: Arial, sans-serif; fill: #172033; }
+      .title { font-size: 25px; font-weight: 700; }
+      .head { font-size: 18px; font-weight: 700; }
+      .label { font-size: 16px; font-weight: 600; }
+      .note { font-size: 14px; fill: #475569; }
+      .arrow { stroke: #475569; stroke-width: 2.5; marker-end: url(#arrow); }
+      .swap { stroke: #64748b; stroke-width: 2; stroke-dasharray: 5 4; }
+    </style>
+  </defs>
+  <rect width="1000" height="410" fill="#fff"/>
+  <text x="40" y="46" class="title">Triple buffer: rotate slot roles, not frame contents</text>
+  <rect x="40" y="92" width="150" height="78" rx="12" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+  <text x="115" y="124" text-anchor="middle" class="head">Camera</text>
+  <text x="115" y="148" text-anchor="middle" class="note">V4L2 frames</text>
+  <rect x="230" y="92" width="180" height="78" rx="12" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+  <text x="320" y="124" text-anchor="middle" class="head">Capture thread</text>
+  <text x="320" y="148" text-anchor="middle" class="note">continues reading</text>
+  <line x1="194" y1="131" x2="222" y2="131" class="arrow"/>
+  <text x="40" y="226" class="note">Three slots take turns holding these roles:</text>
+  <rect x="35" y="248" width="190" height="96" rx="12" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+  <rect x="265" y="248" width="190" height="96" rx="12" fill="#f0fdf4" stroke="#16a34a" stroke-width="2"/>
+  <rect x="495" y="248" width="190" height="96" rx="12" fill="#fff7ed" stroke="#f97316" stroke-width="2"/>
+  <rect x="755" y="248" width="210" height="96" rx="12" fill="#f8fafc" stroke="#64748b" stroke-width="2"/>
+  <text x="130" y="282" text-anchor="middle" class="head">Producer slot</text>
+  <text x="130" y="310" text-anchor="middle" class="note">write next frame</text>
+  <text x="360" y="282" text-anchor="middle" class="head">Shared slot</text>
+  <text x="360" y="310" text-anchor="middle" class="note">publish latest frame</text>
+  <text x="590" y="282" text-anchor="middle" class="head">Consumer slot</text>
+  <text x="590" y="310" text-anchor="middle" class="note">read current frame</text>
+  <text x="860" y="282" text-anchor="middle" class="head">Inference worker</text>
+  <text x="860" y="310" text-anchor="middle" class="note">processes frame</text>
+  <line x1="234" y1="296" x2="257" y2="296" class="swap"/>
+  <line x1="464" y1="296" x2="487" y2="296" class="swap"/>
+  <text x="245" y="278" text-anchor="middle" class="note">swap</text>
+  <text x="475" y="278" text-anchor="middle" class="note">swap</text>
+  <line x1="695" y1="296" x2="747" y2="296" class="arrow"/>
+  <line x1="320" y1="170" x2="130" y2="238" class="arrow"/>
+  <text x="40" y="378" class="note">Slot roles rotate under a short lock; the producer never overwrites a slot held by the consumer.</text>
+  <text x="40" y="399" class="note">When inference falls behind, intermediate frames may be skipped so the consumer can use a newer frame.</text>
+</svg>

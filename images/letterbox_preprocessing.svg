@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="440" viewBox="0 0 1000 440" role="img" aria-labelledby="title desc">
+  <title id="title">Camera image preprocessing to model tensor</title>
+  <desc id="desc">A camera frame is resized with its aspect ratio preserved, padded to a square, converted and normalized, then arranged as an NCHW tensor.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0 0L8 4L0 8Z" fill="#475569"/>
+    </marker>
+    <style>
+      text { font-family: Arial, sans-serif; fill: #172033; }
+      .title { font-size: 25px; font-weight: 700; }
+      .head { font-size: 17px; font-weight: 700; }
+      .label { font-size: 14px; font-weight: 600; }
+      .note { font-size: 13px; fill: #475569; }
+      .arrow { stroke: #475569; stroke-width: 2.5; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="1000" height="440" fill="#fff"/>
+  <text x="40" y="45" class="title">From camera frame to model input</text>
+  <g>
+    <rect x="30" y="72" width="215" height="300" rx="12" fill="#f8fafc" stroke="#2563eb" stroke-width="2"/>
+    <rect x="30" y="72" width="215" height="50" rx="12" fill="#dbeafe"/>
+    <text x="47" y="103" class="head">1. Camera frame</text>
+    <rect x="74" y="166" width="127" height="95" rx="6" fill="#bfdbfe" stroke="#60a5fa"/>
+    <path d="M84 244l31-38 22 23 19-27 35 42Z" fill="#4ade80"/>
+    <circle cx="164" cy="188" r="9" fill="#fbbf24"/>
+    <text x="137" y="290" text-anchor="middle" class="label">BGR image</text>
+    <text x="137" y="314" text-anchor="middle" class="note">640 x 480 (4:3)</text>
+  </g>
+  <line x1="249" y1="224" x2="269" y2="224" class="arrow"/>
+  <g>
+    <rect x="275" y="72" width="215" height="300" rx="12" fill="#f8fafc" stroke="#d97706" stroke-width="2"/>
+    <rect x="275" y="72" width="215" height="50" rx="12" fill="#ffedd5"/>
+    <text x="292" y="103" class="head">2. Letterbox resize</text>
+    <rect x="333" y="151" width="99" height="132" rx="5" fill="#94a3b8"/>
+    <rect x="333" y="180" width="99" height="74" fill="#bfdbfe"/>
+    <path d="M341 247l24-27 18 18 14-22 27 38Z" fill="#4ade80"/>
+    <text x="382" y="170" text-anchor="middle" class="note">padding</text>
+    <text x="382" y="302" text-anchor="middle" class="label">Preserve aspect ratio</text>
+    <text x="382" y="326" text-anchor="middle" class="note">resize + symmetric padding</text>
+  </g>
+  <line x1="494" y1="224" x2="514" y2="224" class="arrow"/>
+  <g>
+    <rect x="520" y="72" width="215" height="300" rx="12" fill="#f8fafc" stroke="#7c3aed" stroke-width="2"/>
+    <rect x="520" y="72" width="215" height="50" rx="12" fill="#f3e8ff"/>
+    <text x="537" y="103" class="head">3. Convert &amp; normalize</text>
+    <text x="545" y="158" class="label">BGR -> RGB</text>
+    <text x="545" y="192" class="label">Scale to float32 [0, 1]</text>
+    <text x="545" y="226" class="label">ImageNet mean / std</text>
+    <text x="545" y="260" class="label">HWC -> CHW</text>
+    <text x="545" y="294" class="label">Add batch dimension</text>
+    <text x="545" y="326" class="note">Keep channel order consistent</text>
+  </g>
+  <line x1="739" y1="224" x2="759" y2="224" class="arrow"/>
+  <g>
+    <rect x="765" y="72" width="205" height="300" rx="12" fill="#f8fafc" stroke="#16a34a" stroke-width="2"/>
+    <rect x="765" y="72" width="205" height="50" rx="12" fill="#dcfce7"/>
+    <text x="782" y="103" class="head">4. Model tensor</text>
+    <rect x="802" y="164" width="130" height="34" rx="5" fill="#fecaca" stroke="#ef4444"/>
+    <rect x="802" y="208" width="130" height="34" rx="5" fill="#bbf7d0" stroke="#22c55e"/>
+    <rect x="802" y="252" width="130" height="34" rx="5" fill="#bfdbfe" stroke="#3b82f6"/>
+    <text x="817" y="186" class="label">R channel</text>
+    <text x="817" y="230" class="label">G channel</text>
+    <text x="817" y="274" class="label">B channel</text>
+    <text x="867" y="319" text-anchor="middle" class="label">[1, 3, 224, 224]</text>
+    <text x="867" y="342" text-anchor="middle" class="note">NCHW, contiguous</text>
+  </g>
+  <text x="40" y="411" class="note">Store the resize scale and padding if model outputs must be mapped back to source-image coordinates.</text>
+</svg>

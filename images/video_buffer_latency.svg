@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="480" viewBox="0 0 1000 480" role="img" aria-labelledby="title desc">
+  <title id="title">Sequential and latest-frame camera pipelines</title>
+  <desc id="desc">Sequential capture and inference can leave older frames queued. A separate capture thread publishes the latest frame, so the consumer may skip intermediate frames and reduce frame age.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0 0L8 4L0 8Z" fill="#475569"/>
+    </marker>
+    <style>
+      text { font-family: Arial, sans-serif; fill: #172033; }
+      .title { font-size: 25px; font-weight: 700; }
+      .head { font-size: 19px; font-weight: 700; }
+      .label { font-size: 16px; font-weight: 600; }
+      .note { font-size: 14px; fill: #475569; }
+      .arrow { stroke: #475569; stroke-width: 2.5; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="1000" height="480" fill="#fff"/>
+  <text x="40" y="45" class="title">Capture continuously; consume the newest available frame</text>
+  <rect x="40" y="68" width="440" height="320" rx="14" fill="#fffafa" stroke="#dc2626" stroke-width="2"/>
+  <rect x="520" y="68" width="440" height="320" rx="14" fill="#f7fef9" stroke="#16a34a" stroke-width="2"/>
+  <path d="M40 82a14 14 0 0 1 14-14h412a14 14 0 0 1 14 14v40H40Z" fill="#fee2e2"/>
+  <path d="M520 82a14 14 0 0 1 14-14h412a14 14 0 0 1 14 14v40H520Z" fill="#dcfce7"/>
+  <text x="62" y="98" class="head">Sequential read + inference</text>
+  <text x="542" y="98" class="head">Capture thread + latest-frame buffer</text>
+  <rect x="82" y="148" width="356" height="56" rx="9" fill="#fff" stroke="#fca5a5"/>
+  <text x="260" y="173" text-anchor="middle" class="label">Camera produces frames continuously</text>
+  <text x="260" y="193" text-anchor="middle" class="note">new frames may wait in a FIFO queue</text>
+  <line x1="260" y1="208" x2="260" y2="232" class="arrow"/>
+  <rect x="82" y="238" width="356" height="56" rx="9" fill="#fff" stroke="#fca5a5"/>
+  <text x="260" y="263" text-anchor="middle" class="label">Inference reads an older queued frame</text>
+  <text x="260" y="283" text-anchor="middle" class="note">when processing takes longer than capture</text>
+  <line x1="260" y1="298" x2="260" y2="322" class="arrow"/>
+  <rect x="82" y="328" width="356" height="42" rx="9" fill="#fee2e2"/>
+  <text x="260" y="355" text-anchor="middle" class="label">Displayed frame age can grow</text>
+  <rect x="562" y="148" width="356" height="56" rx="9" fill="#fff" stroke="#86efac"/>
+  <text x="740" y="173" text-anchor="middle" class="label">Capture thread keeps reading frames</text>
+  <text x="740" y="193" text-anchor="middle" class="note">independent of model inference</text>
+  <line x1="740" y1="208" x2="740" y2="232" class="arrow"/>
+  <rect x="562" y="238" width="356" height="56" rx="9" fill="#fff" stroke="#86efac"/>
+  <text x="740" y="263" text-anchor="middle" class="label">Shared slots publish the latest frame</text>
+  <text x="740" y="283" text-anchor="middle" class="note">intermediate frames may be skipped</text>
+  <line x1="740" y1="298" x2="740" y2="322" class="arrow"/>
+  <rect x="562" y="328" width="356" height="42" rx="9" fill="#dcfce7"/>
+  <text x="740" y="355" text-anchor="middle" class="label">Frame age can be reduced, not eliminated</text>
+  <text x="40" y="426" class="note">Buffering policy affects frame age; capture, inference, and display still take time.</text>
+  <text x="40" y="451" class="note">A latest-frame design trades processing every frame for fresher input when the consumer falls behind.</text>
+</svg>

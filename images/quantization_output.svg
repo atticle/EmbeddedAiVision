@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="340" viewBox="0 0 1000 340" role="img" aria-labelledby="title desc">
+  <title id="title">Example output from INT8 quantization</title>
+  <desc id="desc">The example quantizes five FP32 values to INT8 and shows the absolute reconstruction error. The value 3.0 is clipped to the maximum value and has an error of 1.0.</desc>
+  <defs>
+    <style>
+      text { font-family: Arial, sans-serif; fill: #172033; }
+      .title { font-size: 25px; font-weight: 700; }
+      .head { font-size: 16px; font-weight: 700; }
+      .value { font-family: Consolas, monospace; font-size: 15px; fill: #334155; }
+      .note { font-size: 14px; fill: #475569; }
+    </style>
+  </defs>
+  <rect width="1000" height="340" fill="#fff"/>
+  <text x="40" y="45" class="title">Example: quantized values and reconstruction error</text>
+  <rect x="40" y="76" width="920" height="174" rx="12" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+  <rect x="40" y="76" width="920" height="48" rx="12" fill="#e2e8f0"/>
+  <text x="66" y="106" class="head">Printed result</text>
+  <text x="66" y="158" class="head">INT8 values</text>
+  <text x="66" y="190" class="value">[-127, -32, 0, 32, 127]</text>
+  <line x1="66" y1="204" x2="934" y2="204" stroke="#cbd5e1"/>
+  <text x="66" y="232" class="head">Absolute error</text>
+  <text x="280" y="232" class="value">[0.000000, 0.003937, 0.000000, 0.003937, 1.000000]</text>
+  <rect x="40" y="270" width="920" height="48" rx="10" fill="#fff7ed" stroke="#fdba74"/>
+  <text x="60" y="300" class="note">The input 3.0 is clipped to 127; its reconstructed value is about 2.0, producing an absolute error of 1.0.</text>
+</svg>
