@@ -1,32 +1,3 @@
-<style>
-@media print {
-  /* 1. 페이지 나눔 위치 제어 */
-  h1, h2, h3, h4, h5, h6 {
-    break-after: avoid;           /* 제목 바로 뒤에서 페이지 분할 방지 */
-    page-break-after: avoid;
-    break-inside: avoid;
-  }
-
-  /* 2. 코드 블록 및 표가 어색하게 밀려 빈 공간이 생기지 않도록 분할 허용 */
-  pre, code, table, blockquote {
-    break-inside: auto !important; /* 통째로 다음 장으로 넘어가지 않고 자연스럽게 쪼개지도록 설정 */
-    page-break-inside: auto !important;
-  }
-
-  /* 3. 문단 분할 시 생기는 고아 줄/빈 줄 제어 */
-  p {
-    orphans: 2;                   /* 페이지 하단에 남길 최소 줄 수 */
-    widows: 2;                    /* 페이지 상단으로 넘어갈 최소 줄 수 */
-  }
-
-  /* 4. 불필요하게 큰 여백 축소 */
-  h1, h2, h3, p {
-    margin-top: 0.6em;
-    margin-bottom: 0.4em;
-  }
-}
-</style>
-
 # 임베디드 AI 모델 경량화 및 실시간 엣지 추론
 
 ## 개요
@@ -152,9 +123,10 @@ SSH(Secure Shell)는 네트워크로 다른 컴퓨터에 안전하게 접속해 
    ```
 3. 만들어진 공개 키(id_ed25519.pub)를 실습 장비의 authorized_keys 파일에 등록한다. authorized_keys는 접속을 허락할 공개 키의 목록이다. 처음 접속하면 접속 대상을 신뢰할지 묻는 메시지가 나오는데, 이때 yes를 입력한다. 비밀번호를 물으면 기본 계정 비밀번호인 tos를 입력한다.
    ```powershell
-   [System.IO.File]::ReadAllText("$HOME\.ssh\id_ed25519.pub").Trim() | ssh tos@192.168.254.1 "mkdir -p ~/.ssh && chmod 700 ~/.ssh && tr -d '\r' >> ~/.ssh/authorized_keys && sed -i -e '1s/^\xef\xbb\xbf//' -e '/^$/d' ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+   ssh tos@192.168.254.1 "mkdir -p ~/.ssh && chmod 700 ~/.ssh"
+   scp ~/.ssh/id_ed25519.pub tos@192.168.254.1:~/.ssh/authorized_keys
    ```
-   이 명령은 PC에 있는 공개 키 파일의 내용을 읽어 SSH로 실습 장비에 보낸다. 실습 장비에서는 ~/.ssh 디렉터리를 만들고, 받은 키를 authorized_keys 파일 끝에 덧붙인다. 이때 Windows의 줄바꿈 문자(\r), 파일 맨 앞에 붙을 수 있는 BOM 문자, 빈 줄을 지우고, SSH가 요구하는 접근 권한(디렉터리 700, 파일 600)을 설정한다.
+   이 명령은 PC에 있는 공개 키 파일을 실습 장비에 보낸다. 실습 장비에서는 ~/.ssh 디렉터리를 만들고, 공개 키를 authorized_keys란 이름으로 저장한다.
 4. 다시 SSH로 접속해 비밀번호를 묻지 않고 바로 셸 프롬프트가 나타나는지 확인한다. 셸 프롬프트는 명령을 입력할 수 있음을 알리는 표시이다.
    ```powershell
    ssh tos@192.168.254.1
