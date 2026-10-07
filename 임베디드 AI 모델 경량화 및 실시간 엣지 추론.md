@@ -1620,7 +1620,8 @@ OpenCV가 읽은 카메라 프레임은 보통 BGR 순서의 uint8 배열이다.
 
 - **축소된 영역과 패딩 계산**: 원본 640×480 영상에 $r=0.35$를 곱하면 224×168이 된다. 목표 높이 224에서 168을 빼면 56픽셀이 남으므로 위쪽과 아래쪽에 28픽셀씩 패딩을 둔다.
 
-  $$w_{\text{unpad}} = \operatorname{round}(640 \times 0.35) = 224, \quad h_{\text{unpad}} = \operatorname{round}(480 \times 0.35) = 168$$
+  $$w_{\text{unpad}} = \mathrm{round}(640 \times 0.35) = 224, \quad h_{\text{unpad}} = \mathrm{round}(480 \times 0.35) = 168$$
+  
   $$dw = \frac{224 - 224}{2} = 0, \quad dh = \frac{224 - 168}{2} = 28$$
 
   따라서 원본 프레임을 224×168로 축소한 뒤, 위와 아래에 각각 28픽셀의 여백을 붙여 224×224 입력을 만든다.
