@@ -1566,7 +1566,7 @@ python cpu_stress_profiler.py
 
 <img src="images/video_buffer_latency.svg" alt="순차 캡처와 최신 프레임 버퍼를 사용하는 비동기 캡처 구조의 프레임 나이 비교" style="display:block;width:100%;max-width:1000px;height:auto">
 
-cv2.VideoCapture.read()는 V4L2 커널의 링 버퍼에서 준비된 프레임을 사용자 공간으로 가져온다. 링 버퍼는 정해진 개수의 칸을 돌려 쓰는 저장 공간이다. 카메라 센서가 초당 $\text{FPS}_{\text{cam}}$의 속도로 프레임을 만들 때 입력 주기 $T_{\text{cam}}$은 다음과 같이 정의된다.
+cv2.VideoCapture.read()는 V4L2 커널의 링 버퍼에서 준비된 프레임을 사용자 공간으로 가져온다. 링 버퍼는 정해진 개수의 칸을 돌려 쓰는 저장 공간이다. 카메라 센서가 초당 $f_{\mathrm{cam}}$ (FPS)의 속도로 프레임을 만들 때 입력 주기 $T_{\mathrm{cam}}$ 은 다음과 같이 정의된다.
 
 $$T_{\text{cam}} = \frac{1}{\text{FPS}_{\text{cam}}}$$
 
