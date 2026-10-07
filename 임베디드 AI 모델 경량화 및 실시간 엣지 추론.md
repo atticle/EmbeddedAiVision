@@ -3110,7 +3110,7 @@ torch.onnx.export()는 PyTorch 모델을 ONNX 파일로 내보낸다. 주요 인
 
 #### 최종 구현
 
-다음 model_architecture_inspector.py는 세 모델의 구조 수치를 표로 출력하고, 선택한 ONNX 그래프를 Netron 웹 화면으로 보여 준다. 실습 장비에서 프로그램을 실행한 뒤 PC 브라우저에서 http://192.168.254.1:8080으로 접속한다. 실습 장비의 IP 주소를 바꾸어 쓰는 환경에서는 192.168.254.1 대신 해당 주소를 입력한다.
+다음 model_architecture_inspector.py는 세 모델의 구조 수치를 표로 출력하고, 선택한 ONNX 그래프를 Netron 웹 화면으로 보여 준다. 실습 장비에서 프로그램을 실행한 뒤 PC 브라우저에서 http://192.168.254.1:8080 으로 접속한다. 실습 장비의 IP 주소를 바꾸어 쓰는 환경에서는 192.168.254.1 대신 해당 주소를 입력한다.
 
 ```python
 # model_architecture_inspector.py
@@ -3301,7 +3301,7 @@ ONNX 파일을 만든 뒤 os.path.getsize(onnx_file)은 파일 크기를 바이�
 
 analyze_onnx_graph()는 onnx.load()로 파일을 읽고 node.op_type을 세어 연산자 분포를 만든다. 그래프에 연산 노드가 없으면 raise ValueError(...)로 잘못된 상태를 명확히 알린다. collections.defaultdict(list)는 없는 키를 처음 읽을 때 빈 리스트를 자동으로 만들어 주는 딕셔너리이다. output_consumers는 이 자료형으로 한 노드의 출력 이름을 다음에 소비하는 노드 목록에 연결한다. 이를 이용해 Conv 뒤에 BatchNormalization이나 활성화 함수가 이어지는 패턴을 찾는다. 여기서 찾은 값은 융합 후보이며, 실제 ONNX Runtime이 해당 연산을 하나로 합쳐 실행했다는 증거는 아니다.
 
-argparse.ArgumentParser는 터미널에서 전달한 옵션을 읽는 도구이다. 이 프로그램은 --port 값으로 Netron 서버 포트를 바꿀 수 있으며, 생략하면 8080을 쓴다. netron.start(onnx_file, address=("0.0.0.0", args.port), browse=False)는 실습 장비의 모든 네트워크 인터페이스에서 지정한 포트로 Netron 서버를 연다. 따라서 PC 브라우저에서는 http://192.168.254.1:8080처럼 실습 장비 주소와 포트를 함께 입력한다. browse=False는 실습 장비에서 브라우저를 자동으로 열지 않게 하는 설정이다.
+argparse.ArgumentParser는 터미널에서 전달한 옵션을 읽는 도구이다. 이 프로그램은 --port 값으로 Netron 서버 포트를 바꿀 수 있으며, 생략하면 8080을 쓴다. netron.start(onnx_file, address=("0.0.0.0", args.port), browse=False)는 실습 장비의 모든 네트워크 인터페이스에서 지정한 포트로 Netron 서버를 연다. 따라서 PC 브라우저에서는 http://192.168.254.1:8080 처럼 실습 장비 주소와 포트를 함께 입력한다. browse=False는 실습 장비에서 브라우저를 자동으로 열지 않게 하는 설정이다.
 
 반복문은 현재 선택한 모델의 통계를 출력하고 Netron 서버에 해당 ONNX 파일을 올린 뒤, input()으로 다음 선택을 기다린다. input()은 사용자가 엔터를 누를 때까지 문자열을 읽고, strip().lower()는 앞뒤 공백을 지우고 소문자로 바꾼다. 사용자가 q를 입력하거나 Ctrl+C를 누르면 finally 블록에서 netron.stop()을 호출해 서버를 닫는다. Ctrl+C로 중단할 때 생기는 KeyboardInterrupt는 except KeyboardInterrupt:에서 받아 정상 종료 흐름으로 넘긴다. 마지막으로 os.path.exists()로 파일이 있는지 확인하고 os.remove()로 생성한 ONNX 파일을 삭제한다. 이 정리는 실습 폴더에 임시 파일이 남지 않게 하기 위한 처리이다.
 
@@ -3321,7 +3321,7 @@ python model_architecture_inspector.py
 - 구조 비교표: 세 모델의 파라미터 수와 FP32 가중치 이론값이 출력되는지 확인한다. 결과는 torchvision 모델 구현에 따라 달라질 수 있다.
 - ONNX 파일 크기: 내보낸 파일의 실제 크기가 함께 출력되는지 확인한다. 파라미터 수가 적은 모델일수록 대체로 파일도 작지만, 그래프 정보가 포함되므로 이론값과 정확히 같지는 않다.
 - 깊이별 합성곱 계층 수: ResNet-18과 MobileNet 계열의 측정값을 비교한다. MobileNet 계열에서 깊이별 합성곱 비중이 더 크게 나타나는지 확인한다.
-- 기본 상태(2번 MobileNetV2): PC 브라우저에서 http://192.168.254.1:8080에 접속해 역 잔차 블록과 선형 병목 구조를 확인한다. 실습 장비의 주소가 다르면 해당 주소와 포트 8080을 사용한다. 터미널의 Conv, Clip, Add 연산자 수와 융합 후보를 그래프와 대조한다.
+- 기본 상태(2번 MobileNetV2): PC 브라우저에서 http://192.168.254.1:8080 에 접속해 역 잔차 블록과 선형 병목 구조를 확인한다. 실습 장비의 주소가 다르면 해당 주소와 포트 8080을 사용한다. 터미널의 Conv, Clip, Add 연산자 수와 융합 후보를 그래프와 대조한다.
 - 1번 입력(ResNet-18): 터미널에 1을 입력했을 때 Netron 서버가 전환되는지 확인한다. 브라우저를 새로고침한 뒤 표준 합성곱과 잔차 연결 위주의 그래프로 갱신되는지 확인한다.
 - 3번 입력(MobileNetV3-Small): 터미널에 3을 입력했을 때 HardSwish와 Squeeze-and-Excitation 모듈이 포함된 그래프로 갱신되는지 확인한다.
 - Conv 속성 확인: Netron에서 MobileNetV2의 Conv 노드를 선택하고 group 속성을 확인한다. group 값이 입력 채널 수와 같은 Conv 노드는 깊이별 합성곱에 해당한다.
