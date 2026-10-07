@@ -146,19 +146,11 @@ PC의 VS Code에서 임베디드 보드의 파일을 편집하는 방법은 두 
 
 임베디드 보드의 작업 공간을 PC의 가상 네트워크 드라이브로 연결(마운트)하면, VS Code에서 PC의 폴더를 다루듯이 임베디드 보드의 파일을 열고 편집할 수 있다. 이 방법은 임베디드 보드에서 SSH 서버의 파일 전송 기능(SFTP)만 사용한다. 반면 방법 2의 'Remote - SSH' 확장은 임베디드 보드에서 Node.js 기반의 vscode-server를 계속 실행하므로 메모리를 더 많이 쓴다. 따라서 방법 1을 쓰면 임베디드 보드의 메모리를 모델 실행과 추론에 더 많이 남겨 둘 수 있다.
 
-가상 드라이브 연결에는 WinFsp와 rclone을 함께 사용한다. WinFsp는 Windows에서 가상 드라이브를 만들 수 있게 해 주는 오픈소스 드라이버이고, rclone은 원격 컴퓨터의 파일을 내 컴퓨터의 드라이브처럼 연결하거나 전송하는 도구이다.
+가상 드라이브 연결에는 WinFsp와 rclone을 함께 사용한다. WinFsp는 Windows에서 가상 드라이브를 만들 수 있게 해 주는 오픈소스 드라이버이고, rclone은 원격 컴퓨터의 파일을 내 컴퓨터의 드라이브처럼 연결하거나 전송하는 도구로 VS Code의 'tOS Remote' 확장을 설치하면 이들을 기반으로 VSCode-Server와 유사한 사용자 경험을 제공한다.
 
-- WinFsp 공식 배포 주소에서 설치 파일을 내려받아 PC에 설치한다.
-  - https://github.com/winfsp/winfsp/releases/download/v2.1/winfsp-2.1.25156.msi
-- 자동 마운트 스크립트가 들어 있는 압축 파일을 내려받아 PC의 원하는 폴더에 압축을 푼다. 7z 형식의 압축 파일은 7-Zip 같은 압축 프로그램으로 풀 수 있다.
-  - https://raw.githubusercontent.com/PlanXLab/tOS/main/res/rclone-tos.7z
-- rclone-tos 폴더의 Config.txt 파일을 열어 연결 설정을 확인한다.
-  - REMOTE_PASS: rclone이 SFTP로 접속할 때 쓰는 계정 비밀번호이다(기본값: tos). 앞에서 등록한 SSH 공개 키 인증과는 별개로 동작한다.
-  - REMOTE_WORKSPACE: PC에 연결할 임베디드 보드의 경로이다. 이 경로(~/Workspace)는 임베디드 보드에 미리 만들어 두어야 한다.
-- Mount.bat 파일을 실행해 임베디드 보드의 작업 공간을 Z: 드라이브로 연결한다.
-  - 보안 경고 창이 나타나면 '이 파일을 열기 전에 항상 확인' 항목의 체크를 해제하고 실행을 선택한다.
-  - 실행이 끝나면 Mount.bat 파일이 있는 폴더에 tOS-Lite.code-workspace 파일이 만들어진다.
-- VS Code 메뉴에서 File > Open Workspace from File...을 선택하고, 만들어진 tOS-Lite.code-workspace 파일을 열어 실습을 시작한다.
+- PC의 VS Code에 'Python Debugger'와 'tOS Remote' 확장을 설치한다.
+- tOS Remote에서 PREREQUISITES 항목을 통해 WinFsp, rclone을 설치한다.
+- 'Open Remote Workspace' 버튼을 눌러 /home/tos/Workspace를 연다.
 
 #### 방법 2: VS Code의 'Remote - SSH' 확장으로 원격 작업 공간 열기
 
