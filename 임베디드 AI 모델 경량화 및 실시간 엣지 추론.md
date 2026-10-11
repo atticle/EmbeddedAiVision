@@ -2319,6 +2319,7 @@ np.transpose(normalized, (2, 0, 1))은 축의 순서를 바꾼다. normalized의
 #### 최종 구현
 ```python
 # vision_preprocessor_suite.py
+import time
 import cv2
 import numpy as np
 from async_camera_engine import HighPerformanceAsyncCamera
