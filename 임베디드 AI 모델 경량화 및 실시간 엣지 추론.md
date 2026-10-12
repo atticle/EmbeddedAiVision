@@ -2901,18 +2901,17 @@ $$
 
 - **표준 합성곱(Standard Convolution)**: 공간 방향의 이웃 값과 채널 방향의 값을 한 번에 섞어 출력 채널을 만든다. 필요한 MACs는 다음과 같다.
 
-  $$\text{MACs}_{\text{standard}} = H \times W \times K \times K \times C_{\text{in}} \times C_{\text{out}}$$
-  $$\text{FLOPs}_{\text{standard}} \approx 2 \times \text{MACs}_{\text{standard}}$$
-</p>
+$$\text{MACs}_{\text{standard}} = H \times W \times K \times K \times C_{\text{in}} \times C_{\text{out}}$$
+$$\text{FLOPs}_{\text{standard}} \approx 2 \times \text{MACs}_{\text{standard}}$$
 
 - **깊이별 분리 합성곱(Depthwise Separable Convolution)**: 공간 방향 계산과 채널 섞기를 두 단계로 나눈다.
   - **깊이별 합성곱(Depthwise Convolution)**: 입력 채널마다 따로 $K \times K$ 필터 하나를 적용한다. 채널을 서로 섞지 않으므로 출력 채널 수는 일단 입력 채널 수와 같다.
     
-    $$\text{MACs}_{\text{depthwise}} = H \times W \times K \times K \times C_{\text{in}}$$
+$$\text{MACs}_{\text{depthwise}} = H \times W \times K \times K \times C_{\text{in}}$$
 
   - **점별 합성곱(Pointwise Convolution)**: $1 \times 1$ 필터로 채널을 섞어 원하는 출력 채널 수를 만든다.
     
-    $$\text{MACs}_{\text{pointwise}} = H \times W \times C_{\text{in}} \times C_{\text{out}}$$
+$$\text{MACs}_{\text{pointwise}} = H \times W \times C_{\text{in}} \times C_{\text{out}}$$
 
 따라서 깊이별 분리 합성곱의 총 MACs는 다음과 같다.
 
