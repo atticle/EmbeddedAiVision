@@ -78,7 +78,7 @@ project/
 ├── vision_preprocessor_suite2.py  # 전처리 클래스
 ├── async_camera_engine.py         # 비동기 카메라 클래스
 ├── best_int8.onnx                 # 전송받은 양자화 모델
-└── main_infer.py                  # 아래 작성할 최종 실행 파일
+└── yolo_person_inference.py.py    # 아래 작성할 최종 실행 파일
 ```
 
 ### vision_preprocessor_suite2.py
