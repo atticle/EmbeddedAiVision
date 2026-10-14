@@ -13,6 +13,15 @@
 pip install ultralytics opencv-python onnx onnxruntime onnxsim
 ```
 
+랩탑의 파일 구조는 다음과 같다
+```text
+project/
+├── vision_preprocessor_suite2.py  # 전처리 클래스
+├── async_camera_engine2.py        # 비동기 카메라 클래스
+├── dataset_auto_collection.py     # 데이터 수집
+└── train_and_quantize.py          # 전이학습 및 양자화(INT8)
+```
+
 ### 자동 수집 및 오토 라벨링
 수천 장의 사진에 일일이 마우스로 바운딩 박스를 그릴 필요 없이, OpenCV 내장 얼굴 검출기(Haar Cascade)로 웹캠 촬영과 YOLO 포맷 라벨링(.txt), 학습/검증(8:2) 분할을 동시에 끝내는 자동화 스크립트를 사용한다.
 
@@ -558,14 +567,14 @@ if __name__ == "__main__":
     print(f"라즈베리파이5로 복사할 최종 모델: {os.path.abspath(int8_onnx)}")
 ```
 
-## 라즈베리파이 5에서 실시간 ONNX 추론
+## 라즈베리파이 5또는 PC에서 실시간 ONNX 추론
 PC에서 생성한 best_int8.onnx를 라즈베리라이5로 복사한 후 진행하며, 파일 구조는 다음과 같다
 ```text
 project/
 ├── vision_preprocessor_suite2.py  # 전처리 클래스
-├── async_camera_engine2.py         # 비동기 카메라 클래스
+├── async_camera_engine2.py        # 비동기 카메라 클래스
 ├── best_int8.onnx                 # 양자화 모델
-└── yolo_person_inference.py       # 추론 실행 파일
+└── person_inference.py            # 추론 실행 파일
 ```
 
 신뢰도 임계값(CONF_THRESHOLD = 0.75) 이상인 박스가 검출되면 해당 팀원 이름을 출력하고, 검출되지 않거나 신뢰도가 낮으면(외부인 포함) 즉시 "식별 결과: 없음 (None)"을 출력한다.
