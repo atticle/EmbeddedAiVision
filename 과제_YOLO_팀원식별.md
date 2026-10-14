@@ -25,6 +25,8 @@ project/
 ### 자동 수집 및 오토 라벨링
 수천 장의 사진에 일일이 마우스로 바운딩 박스를 그릴 필요 없이, OpenCV 내장 얼굴 검출기(Haar Cascade)로 웹캠 촬영과 YOLO 포맷 라벨링(.txt), 학습/검증(8:2) 분할을 동시에 끝내는 자동화 스크립트를 사용한다.
 
+스크립트를 실행한 후 이름은 영문으로 입력한다. 프리뷰 화면에서 이미지 추출은 'space'이며, 추출한 이미지를 저정할 때는 's', 취소는 'c'이다. 최대 150장을 수집하지만 언제든지 'q'를 누르면 현재까지 수집한 이미지를 정리하면서 종료한다. 스크립트를 실행할 때, 이미 수집한 이름과 중복되면 해당 이름에 대한 추가 수집을 진행한다.
+
 ```python
 # dataset_auto_collection.py
 import glob
@@ -567,8 +569,8 @@ if __name__ == "__main__":
     print(f"라즈베리파이5로 복사할 최종 모델: {os.path.abspath(int8_onnx)}")
 ```
 
-## 라즈베리파이 5또는 PC에서 실시간 ONNX 추론
-PC에서 생성한 best_int8.onnx를 라즈베리라이5로 복사한 후 진행하며, 파일 구조는 다음과 같다
+## 실시간 ONNX 추론
+랩탑에서 생성한 best_int8.onnx를 라즈베리파이 5로 복사한 후 person_inference.py로 추론을 진행하며, 파일 구조는 다음과 같다. 만약 랩탑에서 추론할 내장 카메라 대신 USB 카메라를 사용할 때는 HighPerformanceAsyncCamera의 카메라 인덱스 번호를 1 이상으로 변경한다. 
 ```text
 project/
 ├── vision_preprocessor_suite2.py  # 전처리 클래스
