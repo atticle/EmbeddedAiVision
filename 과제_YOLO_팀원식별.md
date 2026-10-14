@@ -1,4 +1,172 @@
-## 사진 촬영
+## MCU Part
+### STM32 설정
+pa5 (gpio_output)		led1
+pa6 (gpio_output)         led2
+
+----------------------------------
+pc7 (tim2_ch4)		red
+pb0 (tim1_ch2n)		green
+pa7 (tim14_ch1)		blue
+
+Clock Source: Internal Clock
+Channel n: PWM Generation CHn
+Prescaler (PSC - 1): 64 - 1 (1MHz Timer Clock)
+Counter Period (ARR - 1): 1000 - 1 (1kHz PWM frequency)
+
+----------------------------------
+pa10 (exti10)		sw1
+pb3 (exti3)			sw2
+
+GPIO
+  - mode: ...rising/falling edge...
+
+NVIC
+  - EXTI line 2 and line 3... : checked
+  - EXIT line 4 to 15... : checked
+  - USART2... : checked
+
+----------------------------------
+pa1 (adc1_in0)		vr
+pa2 (adc1_in1)		cds
+
+ADC1
+  - SamplingTime Common 1: 160.5 Cycles
+  - Number Of Conversion: 2
+  - Rank 1
+    - Channel: Channel 0
+    - Sampling Time: Sampling time common 1
+  - Rank 2
+    - Channel: Channel 1
+    - Sampling Time: Sampling time common 1
+
+DMA settings
+  - Add > ADC1
+    - Mode: Circular
+
+ADC1
+  - Continuous Conversion Mode: Enabled
+  - DMA Continuous Requests: Enabled
+  - End Of Conversion Selection: End of sequence conversion
+
+### 테스트 코드
+- app.c
+```c
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "main.h"
+#include "uart_retarget.h"
+
+extern UART_HandleTypeDef huart2;
+extern TIM_HandleTypeDef htim1;
+extern TIM_HandleTypeDef htim2;
+extern TIM_HandleTypeDef htim14;
+extern ADC_HandleTypeDef hadc1;
+
+static volatile bool sw1_clicked = false;
+static volatile bool sw2_clicked = false;
+
+void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin)
+{
+    if (GPIO_Pin == GPIO_PIN_10) // SW1 (PA10)
+    {
+    	if (!sw1_clicked)
+    	{
+    		sw1_clicked = true;
+    		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+    	}
+    }
+    else if (GPIO_Pin == GPIO_PIN_3) // SW2 (PB3)
+    {
+    	if (!sw2_clicked)
+    	{
+    		sw2_clicked = true;
+    		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_6);
+    	}
+    }
+}
+
+void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
+{
+    if (GPIO_Pin == GPIO_PIN_10) // SW1 (PA10)
+    {
+    	sw1_clicked = false;
+    }
+    else if (GPIO_Pin == GPIO_PIN_3) // SW2 (PB3)
+    {
+    	sw2_clicked = false;
+    }
+}
+
+
+long clamp(long val, long min, long max)
+{
+    if (val < min) return min;
+    if (val > max) return max;
+    return val;
+}
+
+long map(long x, long in_min, long in_max, long out_min, long out_max)
+{
+    if (in_max == in_min) return out_min;
+    x = clamp(x, in_min, in_max);
+    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+void rgb(int r, int g, int b)
+{
+    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_4, map(r, 0, 255, 0, 999));
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, map(g, 0, 255, 0, 999));
+    __HAL_TIM_SET_COMPARE(&htim14, TIM_CHANNEL_1, map(b, 0, 255, 0, 999));
+}
+
+
+volatile uint16_t adc_values[2];
+char buf[128];
+int r, g, b;
+
+void setup(void)
+{
+    UART_Retarget_Init(&huart2);
+
+    HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4);     // Red (TIM2_CH4)
+    HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_2);  // Green (TIM1_CH2N)
+    HAL_TIM_PWM_Start(&htim14, TIM_CHANNEL_1);    // Blue (TIM14_CH1)
+
+    HAL_ADCEx_Calibration_Start(&hadc1);
+    HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_values, 2);
+
+    rgb(0, 0, 0);
+}
+
+
+void loop(void)
+{
+#if 0
+    if (fgets(buf, sizeof(buf), stdin) != NULL)
+    {
+        buf[strcspn(buf, "\r\n")] = '\0';
+        if (strlen(buf) != 0)
+        {
+        	printf(">>> %s\r\n",buf);
+        }
+    }
+#endif
+
+#if 0
+    scanf("%d%d%d", &r, &g, &b);
+    printf(">>> %d, %d, %d\r\n", r, g, b);
+#endif
+
+    printf("VR: %u, CdS: %u\r\n", adc_values[0], adc_values[1]);
+    HAL_Delay(100);
+}
+```
+
+## Raspberry PI 5 Part
+### 사진 촬영
 1. 웹캠, 50cm ~ 2m , 총 50장
 2. 정면(50%), 좌/우 30도 기준(30%), 상/하 15도 필트 (20%)
 3. 조명: 어두운/밝은, 안경 착용/미착용
@@ -15,7 +183,7 @@
 5. 내보내기 YOLOv8
 6. 팁: 팀원이 없는 빈 방/빈 책상 화면을 10 ~ 15장 캡처하여, 라벨 파일(.txt)을 빈 내용(0byte)로 둔 채 train/images에 함께 넣어 줌 
 
-## 전이학습 및 ONNX INT 양자화 내보내기
+### 전이학습 및 ONNX INT 양자화 내보내기
 ```python
 # transfer_learning.py
 import os
@@ -73,7 +241,7 @@ quantize_dynamic(
 )
 ```
 
-## 라즈베리파이5에서 추론
+### 라즈베리파이5에서 추론
 PC에서 생성한 best_int8.onnx를 라즈베리라이5로 복사한 후 진행하며, 파일 구조는 다음과 같다
 ```text
 project/
@@ -83,7 +251,7 @@ project/
 └── yolo_person_inference.py       # 아래 작성할 최종 실행 파일
 ```
 
-### vision_preprocessor_suite2.py
+#### vision_preprocessor_suite2.py
 ```python
 # vision_preprocessor_suite2.py
 import cv2
@@ -185,7 +353,7 @@ class VisionPreprocessor:
         return boxes.round().astype(np.int32)
 ```
 
-### yolo_person_inference.py
+#### yolo_person_inference.py
 ```python
 import time
 import cv2
