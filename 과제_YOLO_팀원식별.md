@@ -1,52 +1,48 @@
 ## MCU Part
 ### STM32 설정
-pa5 (gpio_output)		led1
-pa6 (gpio_output)         led2
+- LED
+  - pa5 (gpio_output)		led1  
+  - pa6 (gpio_output)   led2
+- RGB
+  - pc7 (tim2_ch4)		red
+  - pb0 (tim1_ch2n)		green
+  - pa7 (tim14_ch1)		blue
+  - Settings
+    - Clock Source: Internal Clock
+    - Channel n: PWM Generation CHn
+    - Prescaler (PSC - 1): 64 - 1 (1MHz Timer Clock)
+    - Counter Period (ARR - 1): 1000 - 1 (1kHz PWM frequency)
+- Switchs
+  - pa10 (exti10)		sw1
+  - pb3 (exti3)			sw2
+  - Settings
+    - GPIO mode: ...rising/falling edge...
 
-----------------------------------
-pc7 (tim2_ch4)		red
-pb0 (tim1_ch2n)		green
-pa7 (tim14_ch1)		blue
-
-Clock Source: Internal Clock
-Channel n: PWM Generation CHn
-Prescaler (PSC - 1): 64 - 1 (1MHz Timer Clock)
-Counter Period (ARR - 1): 1000 - 1 (1kHz PWM frequency)
-
-----------------------------------
-pa10 (exti10)		sw1
-pb3 (exti3)			sw2
-
-GPIO
-  - mode: ...rising/falling edge...
-
-NVIC
+- NVIC
   - EXTI line 2 and line 3... : checked
   - EXIT line 4 to 15... : checked
   - USART2... : checked
 
-----------------------------------
-pa1 (adc1_in0)		vr
-pa2 (adc1_in1)		cds
-
-ADC1
-  - SamplingTime Common 1: 160.5 Cycles
-  - Number Of Conversion: 2
-  - Rank 1
-    - Channel: Channel 0
-    - Sampling Time: Sampling time common 1
-  - Rank 2
-    - Channel: Channel 1
-    - Sampling Time: Sampling time common 1
-
-DMA settings
-  - Add > ADC1
-    - Mode: Circular
-
-ADC1
-  - Continuous Conversion Mode: Enabled
-  - DMA Continuous Requests: Enabled
-  - End Of Conversion Selection: End of sequence conversion
+- ADC
+  - pa1 (adc1_in0)		vr
+  - pa2 (adc1_in1)		cds
+  - Settings
+    - ADC1
+      - SamplingTime Common 1: 160.5 Cycles
+      - Number Of Conversion: 2
+      - Rank 1
+        - Channel: Channel 0
+        - Sampling Time: Sampling time common 1
+      - Rank 2
+        - Channel: Channel 1
+        - Sampling Time: Sampling time common 1
+    - DMA settings
+      - Add > ADC1
+        - Mode: Circular
+    - ADC1
+      - Continuous Conversion Mode: Enabled
+      - DMA Continuous Requests: Enabled
+      - End Of Conversion Selection: End of sequence conversion
 
 ### 테스트 코드
 - app.c
