@@ -5,30 +5,128 @@
 4. 실제 추론할 장소의 조명(형광등, 자연광, 역광)과 유사한 환경에서 촬영하여 배경 과적합(Overfitting) 방지
 5. 팀 원이 아닌 얼굴 및 빈 공간 사진 100~150장을 데이터셋에 넣되, 라벨 파일(.txt)을 빈 파일로 저장
 
+### 데이터 수집과 전이학습 및 양자화 환경
+
+데이터 수집과 전이학습 및 양자화는 랩탑에서 수행한 후 best_int8.onnx를 라즈베리파이5로 전송해 추론을 실행한다.
+
+```python
+pip install ultralytics opencv-python onnx onnxruntime onnxsim
+```
+
 ### 자동 수집 및 오토 라벨링
 수천 장의 사진에 일일이 마우스로 바운딩 박스를 그릴 필요 없이, OpenCV 내장 얼굴 검출기(Haar Cascade)로 웹캠 촬영과 YOLO 포맷 라벨링(.txt), 학습/검증(8:2) 분할을 동시에 끝내는 자동화 스크립트를 사용한다.
 
 ```python
 # dataset_auto_collection.py
+import glob
 import os
+import urllib.request
 import cv2
 
-TARGET_COUNT = 150  # 인당 수집할 목표 이미지 장수
+TARGET_COUNT = 150  # 1회 실행 시 목표 수집 장수 (도중에 Q로 중단 가능)
 WINDOW_NAME = "Face Data Collector"
 
-# YOLO 데이터셋 디렉토리 구조 자동 생성
+# OpenCV 공식 경량 딥러닝 얼굴 검출기 (YuNet - 측면/가려진 얼굴 검출 특화)
+YUNET_FILENAME = "face_detection_yunet_2023mar.onnx"
+YUNET_URL = "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx"
+
+# 1. YOLO 데이터셋 디렉토리 구조 자동 생성
 for split in ["train", "val"]:
     os.makedirs(f"dataset/images/{split}", exist_ok=True)
     os.makedirs(f"dataset/labels/{split}", exist_ok=True)
 
-# OpenCV 기본 내장 얼굴 검출기 로드
-face_cascade = cv2.CascadeClassifier(
-    cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-)
+
+def load_yunet_detector(input_size=(640, 480), score_thresh=0.6):
+    """측면 및 다양한 각도의 얼굴을 정확히 잡아내는 OpenCV YuNet 검출기 로드"""
+    model_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), YUNET_FILENAME
+    )
+
+    if not os.path.exists(model_path) or os.path.getsize(model_path) == 0:
+        print(f"[안내] 얼굴 검출용 딥러닝 모델('{YUNET_FILENAME}')을 다운로드합니다...")
+        urllib.request.urlretrieve(YUNET_URL, model_path)
+        print(f"[완료] 모델 저장 경로: {model_path}")
+
+    detector = cv2.FaceDetectorYN.create(
+        model=model_path,
+        config="",
+        input_size=input_size,
+        score_threshold=score_thresh,
+        nms_threshold=0.3,
+        top_k=5000,
+    )
+    return detector
+
+
+def detect_best_face(detector, frame):
+    """현재 프레임에서 가장 큰 얼굴 1개의 (x, y, w, h, score) 반환"""
+    h_img, w_img = frame.shape[:2]
+    detector.setInputSize((w_img, h_img))
+
+    _, faces = detector.detect(frame)
+    if faces is None or len(faces) == 0:
+        return None
+
+    best_face = max(faces, key=lambda f: f[2] * f[3])
+    x, y, w, h = best_face[:4]
+    score = best_face[-1]
+
+    x = int(max(0, x))
+    y = int(max(0, y))
+    w = int(min(w_img - x, w))
+    h = int(min(h_img - y, h))
+
+    if w < 30 or h < 30:
+        return None
+
+    return x, y, w, h, float(score)
+
+
+def get_existing_team_names_and_next_start_id():
+    """dataset에 이미 수집된 파일들을 분석하여 기존 팀원 명단과 다음 class_id를 반환"""
+    train_jpgs = glob.glob("dataset/images/train/*.jpg")
+    val_jpgs = glob.glob("dataset/images/val/*.jpg")
+    all_files = train_jpgs + val_jpgs
+
+    names_set = set()
+    for path in all_files:
+        filename = os.path.basename(path)
+        # 파일명 형식: "이름_0000.jpg"
+        if "_" in filename:
+            name = filename.rsplit("_", 1)[0]
+            names_set.add(name)
+
+    existing_names = sorted(list(names_set))
+    return existing_names
+
+
+def get_next_starting_index(member_name):
+    """해당 이름으로 이미 저장된 파일이 있다면 마지막 번호 다음 인덱스부터 시작하도록 계산"""
+    pattern_train = f"dataset/images/train/{member_name}_*.jpg"
+    pattern_val = f"dataset/images/val/{member_name}_*.jpg"
+    existing_files = glob.glob(pattern_train) + glob.glob(pattern_val)
+
+    if not existing_files:
+        return 0
+
+    max_idx = -1
+    for fpath in existing_files:
+        fname = os.path.basename(fpath)
+        try:
+            # 예: "Kim_0045.jpg" -> "0045" -> 45
+            idx_str = fname.rsplit("_", 1)[1].split(".")[0]
+            idx = int(idx_str)
+            if idx > max_idx:
+                max_idx = idx
+        except ValueError:
+            continue
+
+    next_idx = max_idx + 1 if max_idx >= 0 else 0
+    return next_idx
 
 
 def save_data_yaml(team_names):
-    """수집된 팀원 명단과 인원수에 맞춰 YOLO 학습용 data.yaml 자동 생성"""
+    """수집된 전체 팀원 명단과 인원수에 맞춰 YOLO 학습용 data.yaml 자동 생성"""
     yaml_content = f"""path: {os.path.abspath('dataset')}
 train: images/train
 val: images/val
@@ -39,29 +137,76 @@ names:
 
     with open("data.yaml", "w", encoding="utf-8") as f:
         f.write(yaml_content)
-    print(f"\n[완료] 총 {len(team_names)}명의 팀원 정보가 'data.yaml'에 저장되었습니다: {team_names}")
+    print(f"\n[완료] 총 {len(team_names)}명의 팀원 정보가 'data.yaml'에 업데이트되었습니다: {team_names}")
 
 
-def collect_member_data(cap, class_id, member_name):
-    """단일 팀원의 150장 수집 루프 (2단계 프리뷰 <-> 3단계 검출/저장/취소)"""
-    count = 0
-    print(f"\n[{member_name} (ID: {class_id})] 카메라 창에서 SPACE를 눌러 얼굴을 캡처하세요.")
+# 마우스 드래그로 바운딩 박스를 직접 수정하기 위한 상태 변수
+drag_state = {
+    "drawing": False,
+    "ix": -1,
+    "iy": -1,
+    "bbox": None,
+    "updated": False,
+}
 
-    while count < TARGET_COUNT:
-        # [2단계] 카메라 프리뷰 화면 출력
+
+def on_mouse_drag(event, x, y, flags, param):
+    if event == cv2.EVENT_LBUTTONDOWN:
+        drag_state["drawing"] = True
+        drag_state["ix"], drag_state["iy"] = x, y
+
+    elif event == cv2.EVENT_MOUSEMOVE and drag_state["drawing"]:
+        x1 = min(drag_state["ix"], x)
+        y1 = min(drag_state["iy"], y)
+        w = abs(x - drag_state["ix"])
+        h = abs(y - drag_state["iy"])
+        if w > 10 and h > 10:
+            drag_state["bbox"] = (x1, y1, w, h)
+            drag_state["updated"] = True
+
+    elif event == cv2.EVENT_LBUTTONUP:
+        drag_state["drawing"] = False
+        x1 = min(drag_state["ix"], x)
+        y1 = min(drag_state["iy"], y)
+        w = abs(x - drag_state["ix"])
+        h = abs(y - drag_state["iy"])
+        if w > 20 and h > 20:
+            drag_state["bbox"] = (x1, y1, w, h)
+            drag_state["updated"] = True
+
+
+def collect_member_data(cap, detector, class_id, member_name):
+    """단일 팀원 데이터 수집 루프 (Q를 눌러 중단 가능, 기존 번호 이어서 추가 수집)"""
+    start_count = get_next_starting_index(member_name)
+    count = start_count
+    target_end_count = start_count + TARGET_COUNT
+
+    if start_count > 0:
+        print(f"\n[추가 수집 모드] '{member_name}'님의 기존 데이터가 있어 {start_count}번부터 이어서 수집합니다.")
+    else:
+        print(f"\n[{member_name} (ID: {class_id})] 신규 수집을 시작합니다. (중단하려면 'Q' 키 입력)")
+
+    cv2.namedWindow(WINDOW_NAME)
+
+    while count < target_end_count:
         ret, frame = cap.read()
         if not ret or frame is None:
             print("카메라 프레임을 읽을 수 없습니다.")
             break
 
         preview_frame = frame.copy()
-        status_text = f"[{member_name} (ID:{class_id})] {count}/{TARGET_COUNT} | Press SPACE to Capture"
+        det = detect_best_face(detector, frame)
+        if det is not None:
+            px, py, pw, ph, _ = det
+            cv2.rectangle(preview_frame, (px, py), (px + pw, py + ph), (255, 200, 0), 1)
+
+        status_text = f"[{member_name}] {count}/{target_end_count} | SPACE: Capture | Q: Stop"
         cv2.putText(
             preview_frame,
             status_text,
             (15, 35),
             cv2.FONT_HERSHEY_SIMPLEX,
-            0.7,
+            0.65,
             (0, 255, 255),
             2,
         )
@@ -69,97 +214,94 @@ def collect_member_data(cap, class_id, member_name):
 
         key = cv2.waitKey(1) & 0xFF
 
-        # [3단계] SPACE 키를 누르면 현재 프레임에서 얼굴 검출 및 바운딩 박스 출력
+        # Q 키를 누르면 수집 즉시 중단
+        if key in (ord("q"), ord("Q")):
+            print(f"\n[수집 중단] '{member_name}'님의 수집을 사용자에 의해 중단합니다. (총 {count}장 저장됨)")
+            return "STOP"
+
+        # SPACE 키를 누르면 캡처 및 확인 화면 진입
         if key == ord(" "):
             h_img, w_img = frame.shape[:2]
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            faces = face_cascade.detectMultiScale(
-                gray, scaleFactor=1.1, minNeighbors=5, minSize=(80, 80)
-            )
+            det = detect_best_face(detector, frame)
 
-            # 얼굴이 검출되지 않은 경우 안내 후 2단계(프리뷰)로 복귀
-            if len(faces) == 0:
-                warn_frame = frame.copy()
-                cv2.putText(
-                    warn_frame,
-                    "No Face Detected! Try Again.",
-                    (15, 45),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.9,
-                    (0, 0, 255),
-                    2,
-                )
-                cv2.imshow(WINDOW_NAME, warn_frame)
-                cv2.waitKey(700)  # 0.7초간 경고 표시 후 프리뷰 복귀
-                continue
+            if det is not None:
+                x, y, w, h, _ = det
+                drag_state["bbox"] = (x, y, w, h)
+            else:
+                drag_state["bbox"] = None
 
-            # 가장 큰 얼굴 1개 선택 및 바운딩 박스 표시
-            faces = sorted(faces, key=lambda b: b[2] * b[3], reverse=True)
-            x, y, w, h = faces[0]
+            cv2.setMouseCallback(WINDOW_NAME, on_mouse_drag)
 
-            review_frame = frame.copy()
-            cv2.rectangle(review_frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            cv2.putText(
-                review_frame,
-                f"[{member_name}] {count + 1}/{TARGET_COUNT} -> Press 'S' to Save | 'C' to Cancel",
-                (15, 35),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.65,
-                (0, 255, 0),
-                2,
-            )
-            cv2.imshow(WINDOW_NAME, review_frame)
-
-            # 's'(저장) 또는 'c'(취소) 키 입력 대기
             while True:
-                decision_key = cv2.waitKey(0) & 0xFF
+                review_frame = frame.copy()
+                if drag_state["bbox"] is not None:
+                    bx, by, bw, bh = drag_state["bbox"]
+                    cv2.rectangle(review_frame, (bx, by), (bx + bw, by + bh), (0, 255, 0), 2)
+                    msg = f"[{member_name}] {count + 1}/{target_end_count} -> 'S': Save | 'C': Cancel"
+                    color = (0, 255, 0)
+                else:
+                    msg = "No Face! Drag mouse or Press 'C' to Cancel"
+                    color = (0, 0, 255)
+
+                cv2.putText(review_frame, msg, (15, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.58, color, 2)
+                cv2.imshow(WINDOW_NAME, review_frame)
+
+                decision_key = cv2.waitKey(20) & 0xFF
 
                 if decision_key in (ord("s"), ord("S")):
-                    # 8:2 비율로 train / val 자동 분할 저장
+                    if drag_state["bbox"] is None:
+                        print("  -> 저장할 박스가 없습니다. 마우스로 그리거나 C를 누르세요.")
+                        continue
+
+                    bx, by, bw, bh = drag_state["bbox"]
                     split = "val" if (count % 5 == 0) else "train"
                     filename = f"{member_name}_{count:04d}"
 
-                    # YOLO 정규화 좌표 (x_center, y_center, width, height) 계산
-                    cx = (x + w / 2.0) / w_img
-                    cy = (y + h / 2.0) / h_img
-                    nw = w / w_img
-                    nh = h / h_img
+                    cx = max(0.0, min(1.0, (bx + bw / 2.0) / w_img))
+                    cy = max(0.0, min(1.0, (by + bh / 2.0) / h_img))
+                    nw = max(0.0, min(1.0, bw / w_img))
+                    nh = max(0.0, min(1.0, bh / h_img))
 
-                    # 박스가 그려지지 않은 깨끗한 원본(frame)과 라벨 저장
                     cv2.imwrite(f"dataset/images/{split}/{filename}.jpg", frame)
                     with open(f"dataset/labels/{split}/{filename}.txt", "w", encoding="utf-8") as f:
                         f.write(f"{class_id} {cx:.6f} {cy:.6f} {nw:.6f} {nh:.6f}\n")
 
                     count += 1
-                    print(f"  -> 저장 완료 ({count}/{TARGET_COUNT}): {filename}.jpg")
-                    break  # 저장 완료 후 루프 탈출 (150장 미만이면 2단계 프리뷰로 이동)
+                    print(f"  -> 저장 완료 ({count}/{target_end_count}): {filename}.jpg")
+                    break
 
                 elif decision_key in (ord("c"), ord("C")):
-                    print("  -> 취소됨 (저장하지 않고 프리뷰로 돌아갑니다).")
-                    break  # 취소 후 2단계 프리뷰로 이동
+                    print("  -> 취소됨 (프리뷰로 복귀)")
+                    break
+
+            cv2.setMouseCallback(WINDOW_NAME, lambda *args: None)
+
+    print(f"\n[{member_name}] 목표 수량 달성! (총 {count}장)")
+    return "DONE"
 
 
 def ask_continue_next_user(cap, completed_member):
-    """[4단계] 150장 수집 완료 후 다음 사용자 진행 여부(Y/N)를 묻는 함수"""
-    print(f"\n[{completed_member}] {TARGET_COUNT}장 수집 완료!")
-    print("다음 사용자 데이터를 수집하시겠습니까? (카메라 창에서 Y: 진행 / N: 종료)")
+    """목표 달성 또는 중단 후 다음 사용자 진행 여부(Y/N)를 묻는 함수"""
+    print(f"\n다음 사용자 데이터를 수집하시겠습니까? (카메라 창에서 Y: 진행 / N: 종료)")
 
     ret, frame = cap.read()
     if not ret or frame is None:
-        frame = cv2.imread("dataset/images/train/" + os.listdir("dataset/images/train")[0])
+        try:
+            frame = cv2.imread(glob.glob("dataset/images/train/*.jpg")[0])
+        except Exception:
+            return False
 
     prompt_frame = frame.copy()
-    # 가독성을 위한 반투명 어두운 배경 처리
     overlay = prompt_frame.copy()
     cv2.rectangle(overlay, (0, 0), (prompt_frame.shape[1], prompt_frame.shape[0]), (0, 0, 0), -1)
     cv2.addWeighted(overlay, 0.6, prompt_frame, 0.4, 0, prompt_frame)
 
     cv2.putText(
         prompt_frame,
-        f"'{completed_member}' {TARGET_COUNT} Images Completed!",
+        f"Session finished for '{completed_member}'",
         (30, 180),
         cv2.FONT_HERSHEY_SIMPLEX,
-        0.9,
+        0.8,
         (0, 255, 0),
         2,
     )
@@ -168,7 +310,7 @@ def ask_continue_next_user(cap, completed_member):
         "Collect next member? Press [Y] Yes / [N] No",
         (30, 240),
         cv2.FONT_HERSHEY_SIMPLEX,
-        0.75,
+        0.7,
         (0, 255, 255),
         2,
     )
@@ -185,33 +327,46 @@ def ask_continue_next_user(cap, completed_member):
 def main():
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
-        raise RuntimeError("웹캠을 열 수 없습니다. 카메라 연결을 확인하세요.")
+        raise RuntimeError("웹캠을 열 수 없습니다.")
 
-    team_names = []
-    class_id = 0
+    detector = load_yunet_detector()
+
+    # 기존에 수집된 팀원 목록을 불러와서 ID 순서 유지
+    existing_team_names = get_existing_team_names_and_next_start_id()
+    team_names = list(existing_team_names)
+
+    print(f"현재 등록된 팀원 목록: {team_names if team_names else '없음'}")
 
     try:
         while True:
-            # [1단계] 터미널을 통해 팀원 이름 입력 (창은 잠시 닫아 터미널 포커스 유도)
             cv2.destroyAllWindows()
             while True:
-                member_name = input(f"\n[1단계] {class_id}번 팀원의 이름을 입력하세요: ").strip()
+                member_name = input(
+                    f"\n[1단계] 수집할 팀원의 이름을 입력하세요 (기존 이름 입력 시 추가 수집): "
+                ).strip()
                 if member_name:
                     break
-                print("이름은 비워둘 수 없습니다. 다시 입력해 주세요.")
+                print("이름은 비워둘 수 없습니다.")
 
-            team_names.append(member_name)
-
-            # [2단계 ~ 4단계 전반부] 150장이 수집될 때까지 프리뷰 -> SPACE -> S/C 반복
-            collect_member_data(cap, class_id, member_name)
-
-            # [4단계 후반부 & 5단계] 150장 수집 완료 후 Y/N 입력에 따라 1단계 반복 또는 종료
-            if ask_continue_next_user(cap, member_name):
-                class_id += 1
-                continue  # 5단계: Y를 누르면 1단계부터 다시 진행
+            # 이미 존재하는 이름이면 해당 인덱스(class_id) 재사용, 아니면 새로 추가
+            if member_name in team_names:
+                class_id = team_names.index(member_name)
             else:
-                print("\n데이터 수집을 종료합니다.")
-                break  # N을 누르면 종료
+                team_names.append(member_name)
+                class_id = len(team_names) - 1
+
+            # 수집 실행 (Q를 눌러 중단하면 'STOP' 반환)
+            status = collect_member_data(cap, detector, class_id, member_name)
+
+            # 중간에 중단했든 완료했든 data.yaml 갱신
+            save_data_yaml(team_names)
+
+            # 다음 사용자 진행 여부 확인
+            if ask_continue_next_user(cap, member_name):
+                continue
+            else:
+                print("\n데이터 수집을 최종 종료합니다.")
+                break
 
     except KeyboardInterrupt:
         print("\n사용자에 의해 수집이 중단되었습니다.")
@@ -231,6 +386,7 @@ if __name__ == "__main__":
 
 ```python
 # train_and_quantize.py
+import sys
 import glob
 import json
 import os
@@ -247,6 +403,11 @@ from onnxruntime.quantization import (
 from onnxruntime.quantization.shape_inference import quant_pre_process
 from ultralytics import YOLO
 import yaml
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
 from vision_preprocessor_suite2 import VisionPreprocessor
 
 IMGSZ = 320
@@ -402,7 +563,7 @@ PC에서 생성한 best_int8.onnx를 라즈베리라이5로 복사한 후 진행
 ```text
 project/
 ├── vision_preprocessor_suite2.py  # 전처리 클래스
-├── async_camera_engine.py         # 비동기 카메라 클래스
+├── async_camera_engine2.py         # 비동기 카메라 클래스
 ├── best_int8.onnx                 # 양자화 모델
 └── yolo_person_inference.py       # 추론 실행 파일
 ```
@@ -541,6 +702,7 @@ class VisionPreprocessor:
 ### async_camera_engine2.py
 ```python
 # async_camera_engine.py
+import sys
 import cv2
 import threading
 import time
@@ -556,7 +718,10 @@ class HighPerformanceAsyncCamera:
         self.height = height
 
         # V4L2 백엔드 명시
-        self.cap = cv2.VideoCapture(src, cv2.CAP_V4L2)
+        if sys.platform == "win32":
+            self.cap = cv2.VideoCapture(src, cv2.CAP_DSHOW)
+        else:
+            self.cap = cv2.VideoCapture(src, cv2.CAP_V4L2)
         if not self.cap.isOpened():
             raise RuntimeError(f"카메라 장치(/dev/video{src})를 열 수 없습니다.")
 
@@ -691,9 +856,10 @@ class HighPerformanceAsyncCamera:
             self.cap.release()
 ```
 
-### yolo_person_inference.py
+### person_inference.py
 ```python
-# yolo_person_inference.py
+# person_inference.py
+import sys
 import ast
 from collections import deque
 from datetime import datetime
@@ -703,6 +869,11 @@ import time
 import cv2
 import numpy as np
 import onnxruntime as ort
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+    
 from async_camera_engine2 import HighPerformanceAsyncCamera
 from vision_preprocessor_suite2 import VisionPreprocessor
 
@@ -927,15 +1098,7 @@ def main():
         target_size=target_size, norm_mode="yolo", input_dtype=input_dtype
     )
 
-    # async_camera_engine2의 fps 인자 지원 여부 자동 호환
-    try:
-        camera = HighPerformanceAsyncCamera(
-            src=0, width=640, height=480, fps=30, codec="MJPG"
-        )
-    except TypeError:
-        camera = HighPerformanceAsyncCamera(
-            src=0, width=640, height=480, codec="MJPG"
-        )
+    camera = HighPerformanceAsyncCamera(src=0, width=640, height=480, fps=30, codec="MJPG")
 
     smoother = TemporalSmoother(
         window_size=WINDOW_SIZE, min_hits=MIN_HITS, ema_alpha=EMA_ALPHA
